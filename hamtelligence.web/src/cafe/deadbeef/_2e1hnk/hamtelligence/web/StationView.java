@@ -1,11 +1,10 @@
-package hamtelligence.web.servlet;
+package cafe.deadbeef._2e1hnk.hamtelligence.web;
 
 import static com.mongodb.client.model.Filters.eq;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,8 +21,6 @@ import org.bson.codecs.configuration.CodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.mongodb.AggregationOutput;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -39,14 +36,12 @@ import scraper.station.Station;
 /**
  * Servlet implementation class FileCounter
  */
-@WebServlet("/json")
-public class Json extends HttpServlet {
+@WebServlet("/station")
+public class StationView extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
 	private MongoClient mongoClient;
 	private MongoCollection<Station> collection;
-	
-	private boolean pretty = false;
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -70,23 +65,46 @@ public class Json extends HttpServlet {
 			station = collection.find(eq("callsign", stationCallsign)).first();
 		}
 		
-		if ( request.getParameterMap().keySet().contains("pretty") ) {
-			this.pretty = true;
-		}
-		
 		System.out.println(station.getCallsign());
+
 		
-		// Set response content type
-		response.setContentType("application/json");
-		PrintWriter out = response.getWriter();
-		  
-		if ( pretty ) {
-			Gson gson = new GsonBuilder().setPrettyPrinting().create();
-			String json = gson.toJson(station);
-			out.println(json);
-		} else {
-			out.println(station.toJson());
+
+		//System.out.println(station.getCallsign());
+
+		request.setAttribute("callsign", station.getCallsign());
+		request.setAttribute("locations", station.getLocations());
+		request.setAttribute("station", station);
+		
+		Map<String, Integer> modeUse = new HashMap<String, Integer>();
+		Map<String, Integer> bandUse = new HashMap<String, Integer>();
+		
+		for ( Activity spot : station.getActivity() ) {
+			if ( !modeUse.keySet().contains(spot.getMode()) ) {
+				modeUse.put(spot.getMode(), 0);
+			}
+			modeUse.put(spot.getMode(), modeUse.get(spot.getMode()) + 1);
+			
+			if ( !bandUse.keySet().contains(spot.getBand()) ) {
+				bandUse.put(spot.getBand(), 0);
+			}
+			bandUse.put(spot.getBand(), bandUse.get(spot.getBand()) + 1);
+			
+			
 		}
+		
+		request.setAttribute("modeUse", modeUse);
+		
+		// request.setAttribute("time", new Date());
+		// request.setAttribute("time", new Date());
+
+		RequestDispatcher view = request.getRequestDispatcher("WEB-INF/templates/station.jsp");
+		view.forward(request, response);
+
+		/*
+		 * response.setContentType("text/plain"); PrintWriter out =
+		 * response.getWriter(); if (session.isNew()) { count++; }
+		 * out.println("This site has been accessed " + count + " times.");
+		 */
 	}
 
 	@Override
